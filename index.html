@@ -32,27 +32,83 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script> -->
 	</body>
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.92.0.min.js"></script>
+	<script src="amazon-cognito-identity.min.js"></script>
   <script type="text/javascript">
   	// Configure AWS SDK for JavaScript & set region and credentials
     // Initialize the Amazon Cognito credentials provider
-    AWS.config.region = 'us-east-1'; // Region
-    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-      IdentityPoolId: 'us-east-1:7712f610-d58a-4854-9297-f9bf193b183e',
-    });
-    var form = document.getElementById('cognito-signin');
-    form.addEventListener('submit',function(event){
-      event.preventDefault();
-      var data = new FormData(form);
-      var email = data.get('email');
-      var password = data.get('password');
-      console.log("Email: " + email + " - Password: "+password);
-      AWS.config.credentials.refresh(function (error) {
-        if (error) {
-          console.error(error);
-        } else {
-          console.log('Successfully logged!');
-        }
-      });
-    });
+		var region = 'us-east-1';
+		var identityPoolId = 'us-east-1:12bfad04-4796-41c9-a67a-e9537d0d4c1a';
+		var clientId = 'jrehfd9bq6br71ge4ao07hrfd';
+		var userPoolId = 'us-east-1_2cpDG6O0l';
+		var authenticationData = {
+      Username : 'vo.bee92@gmail.com',
+      Password : '222222',
+    };
+		var CognitoUserPool = AmazonCognitoIdentity.CognitoUserPool;
+		var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+		var poolData = {
+        UserPoolId : userPoolId, // Your user pool id here
+        ClientId : clientId // Your client id here
+    };
+		var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+		var userData = {
+				Username : authenticationData.Username,
+				Pool : userPool
+		};
+		var cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+		cognitoUser.authenticateUser(authenticationDetails, {
+			onSuccess: function (result) {
+				console.log('access token + ' + result.getAccessToken().getJwtToken());
+				//POTENTIAL: Region needs to be set if not already set previously elsewhere.
+				AWS.config.region = region;
+				var url = 'cognito-idp.'+region+'.amazonaws.com/'+userPoolId;
+				console.log(identityPoolId);
+				AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+					IdentityPoolId : identityPoolId, // your identity pool id here
+					Logins : {
+						// Change the key below according to the specific region your user pool is in.
+						'cognito-idp.us-east-1.amazonaws.com/us-east-1_2cpDG6O0l' : result.getIdToken().getJwtToken()
+					}
+				});
+				//refreshes credentials using AWS.CognitoIdentity.getCredentialsForIdentity()
+				AWS.config.credentials.refresh((error) => {
+					if (error) {
+						console.log(error);
+					} else {
+						// Instantiate aws sdk service objects now that the credentials have been updated.
+						// example: var s3 = new AWS.S3();
+						console.log('Successfully logged!');
+					}
+				});
+			},
+			newPasswordRequired: function(userAttributes, requiredAttributes) {
+        console.log("User needs new password");
+				console.log(userAttributes);
+				console.log(requiredAttributes);
+        // res({userAttributes, requiredAttributes});
+				cognitoUser.completeNewPasswordChallenge('222222', {}, this);
+	    },
+			onFailure: function(err) {
+				alert("error check console");
+				console.log(err);
+			},
+
+		});
+
+    // var form = document.getElementById('cognito-signin');
+    // form.addEventListener('submit',function(event){
+    //   event.preventDefault();
+    //   var data = new FormData(form);
+    //   var email = data.get('email');
+    //   var password = data.get('password');
+    //   console.log("Email: " + email + " - Password: "+password);
+    //   AWS.config.credentials.refresh(function (error) {
+    //     if (error) {
+    //       console.error(error);
+    //     } else {
+    //       console.log('Successfully logged!');
+    //     }
+    //   });
+    // });
   </script>
 </html>
