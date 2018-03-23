@@ -63,6 +63,17 @@
 			cognitoUser.authenticateUser(authenticationDetails, {
 				onSuccess: function (result) {
 					console.log(result);
+					console.log(result.idToken.jwtToken);
+					console.log("About to do some API CALLS");
+					var apiUrl = "https://hzbpkjmkte.execute-api.us-east-1.amazonaws.com/prod/";
+					var xhttp = new XMLHttpRequest();
+					console.log(xhttp);
+					xhttp.open('POST',apiUrl, true);
+					xhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+					xhttp.setRequestHeader("Authorization", result.idToken.jwtToken);
+					xhttp.send();
+					console.log(xhttp.responseText);
+					return;
 					// console.log(result.getIdentityToken());
 					// console.log(result.getAccessToken());
 				  // console.log('access token + ' + result.getAccessToken().getJwtToken());
@@ -94,7 +105,7 @@
 				onFailure: function(err) {
 					// alert("error check console");
 					if (err.message) {
-						alert(err.message);
+						alert("fail... "+err.message);
 					}
 				},
 			});
