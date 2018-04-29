@@ -1,3 +1,13 @@
+<style media="screen">
+.footer {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	height: 60px;
+	line-height: 60px;
+	background-color: #f5f5f5;
+}
+</style>
 <html lang="en" data-ember-extension="1">
 	<head>
 		<meta charset="utf-8">
@@ -13,26 +23,45 @@
 	</head>
 	<body>
 		<div class="container">
-			<form class="form-signin" id="cognito-signin">
-				<h2 class="form-signin-heading">Please sign in</h2>
+			<form class="form-signin card" id="cognito-signin">
+				<h1>WxPress CPanel</h1>
+				<p>Log into the CPanel to access your Wordpress instance.</p>
 				<label for="inputEmail" class="sr-only">Email address</label>
-				<input value="vo.bee92@gmail.com" name="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required="" autofocus="">
+				<input value="bee@ssibtr.com" name="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required="" autofocus="">
 				<label for="inputPassword" class="sr-only">Password</label>
-				<input value="222222" name="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required="">
-				<div class="checkbox">
-					<label>
-					<input type="checkbox" value="remember-me"> Remember me
-					</label>
-				</div>
-				<button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+				<input value="" name="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required="">
+				<button id="submit-btn" class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+			</form>
+
+			<form class="form-signin card d-none" id="change-password">
+				<h1>WxPress CPanel</h1>
+				<p>Change password before logging into the CPanel.</p>
+				<label for="inputPassword" class="sr-only">New Password</label>
+				<input value="" name="new_password" type="password" id="changePassword" class="form-control" placeholder="New Password" required="">
+				<label for="inputPassword" class="sr-only">New Password Confirm</label>
+				<input value="" name="new_password_confirm" type="password" id="changePasswordConfirm" class="form-control" placeholder="New Password Confirm" required="">
+				<button id="submit-new-btn" class="btn btn-lg btn-primary btn-block" type="submit">Update</button>
 			</form>
 		</div>
+
+		<footer class="footer">
+      <div class="container">
+        <span class="text-muted">
+        	<a target="_blank" href="https://github.com/bvo-wxpress">
+        		Created by Bee Vo
+        	</a>
+        </span>
+      </div>
+    </footer>
 	</body>
   <script type="text/javascript">
   	// Configure AWS SDK for JavaScript & set region and credentials
     // Initialize the Amazon Cognito credentials provider
 		var region = 'us-east-1';
+		var cognitoUser = null;
 		function cognitoAuth(email,password){
+
+			isLoading = true;
 			var authenticationData = {
 				Username : email,
 				Password : password,
@@ -52,7 +81,7 @@
 					Username : authenticationData.Username,
 					Pool : userPool
 			};
-			var cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+			cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
 			cognitoUser.authenticateUser(authenticationDetails, {
 				onSuccess: function (result) {
 					//user has been authenticated
@@ -67,10 +96,12 @@
 					xhttp.send();
 					xhttp.onreadystatechange = function() {
 						if (xhttp.readyState == XMLHttpRequest.DONE) {
+							sub_btn.textContent = "Submit";
+							isLoading = false;
 							var response = JSON.parse(xhttp.responseText);
 							if (response.public_dns) {
 								if (confirm("Instance Started. Ready to go to WP-Admin?")) {
-									window.location.href = "http://"+response.public_dns;
+									window.location.href = "http://"+response.public_dns+"/wp-admin";
 								}else{
 									window.location.reload();
 								}
@@ -85,24 +116,62 @@
 					return;
 				},
 				newPasswordRequired: function(userAttributes, requiredAttributes) {
-					alert("User needs new password. Defaulting to 222222");
-					cognitoUser.completeNewPasswordChallenge('222222', {}, this);
+					if (new_password) {
+						cognitoUser.completeNewPasswordChallenge(new_password, {}, this);
+					}else{
+						sub_btn.textContent = "Submit";
+						sub_btn.removeAttribute('disabled');
+						document.getElementById('cognito-signin').classList.add('d-none');
+						document.getElementById('change-password').classList.remove('d-none');
+						alert("NEW PASSWORD REQUIRED");
+						isLoading = false;
+					}
+
 				},
 				onFailure: function(err) {
 					if (err.message) {
-						alert("fail... "+err.message);
+						sub_btn.textContent = "Submit";
+						sub_btn.removeAttribute('disabled');
+						isLoading = false;
+						alert("Error: "+err.message);
 					}
 				},
 			});
 		}
+		var sub_btn = document.getElementById('submit-btn');
+		var new_btn = document.getElementById('submit-new-btn');
+		var isLoading = false;
     var form = document.getElementById('cognito-signin');
+		var email = '';
+		var new_password = '';
+		var password = '';
     form.addEventListener('submit',function(event){
+			if(isLoading){
+				return;
+			}
+			sub_btn.textContent = "Loading...";
+			sub_btn.setAttribute('disabled','');
       event.preventDefault();
       var data = new FormData(form);
-      var email = data.get('email');
-      var password = data.get('password');
+      email = data.get('email');
+      password = data.get('password');
       cognitoAuth(email,password);
     });
+
+		var changeForm = document.getElementById('change-password');
+		changeForm.addEventListener('submit', function(event){
+
+			event.preventDefault();
+      var data = new FormData(changeForm);
+			if(data.get('new_password') != data.get('new_password_confirm')){
+				alert("Passwords do not match.");
+				return;
+			}else{
+				new_btn.setAttribute('disabled','');
+				new_password = data.get('new_password');
+	      cognitoAuth(email,password);
+			}
+		});
   </script>
 
 	<script type="text/javascript">
